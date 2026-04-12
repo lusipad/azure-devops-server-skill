@@ -5,7 +5,7 @@
 
 Languages: [English](README.md) | [简体中文](README.zh-CN.md)
 
-PowerShell-backed Codex/OMX skill for Azure DevOps Server 2020/2022 and best-effort older TFS deployments. The repository packages an installable skill, reusable REST helpers, and focused reference notes so on-prem Azure DevOps work stays consistent, preview-first, and honest about support boundaries.
+PowerShell-backed Azure DevOps Server toolkit for Azure DevOps Server 2020/2022 and best-effort older TFS deployments. The repository packages reusable REST helpers, an installable skill bundle, and focused reference notes so on-prem Azure DevOps work stays consistent, preview-first, and honest about support boundaries.
 
 ## What This Repository Provides
 
@@ -13,7 +13,7 @@ PowerShell-backed Codex/OMX skill for Azure DevOps Server 2020/2022 and best-eff
 - A generic REST wrapper for collection-, project-, and team-scoped Azure DevOps Server routes
 - A bootstrap connection probe for auth, API version, and conditional release support
 - Reference guides for repositories, work items, work/team routes, URL shape, and API versions
-- Agent metadata for Codex/OpenAI-style skill registration
+- Agent metadata for skill registration
 
 ## Support Scope
 
@@ -59,7 +59,7 @@ Target support policy:
 - One of:
   - Windows integrated auth via `default-credentials`
   - Personal Access Token via `pat`
-- A local Codex/OMX skills directory if you want to install the skill into your agent environment
+- A local skills directory if you want to install the bundled skill into your agent environment
 
 ## Install
 

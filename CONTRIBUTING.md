@@ -67,4 +67,4 @@ When a change touches mutating routes, include a dry-run example or equivalent s
 
 ## Commit Style
 
-This repository uses decision-oriented commits. Prefer commit messages that explain why the change exists, not only what changed. If you are contributing through Codex/OMX workflows, preserve the existing Lore-style trailers when practical.
+This repository uses decision-oriented commits. Prefer commit messages that explain why the change exists, not only what changed. If you are contributing through automated agent workflows, preserve the existing Lore-style trailers when practical.

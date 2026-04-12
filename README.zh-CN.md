@@ -5,7 +5,7 @@
 
 语言: [English](README.md) | [简体中文](README.zh-CN.md)
 
-这是一个面向 Azure DevOps Server 2020/2022，并对较老 TFS 版本提供尽力支持的 Codex/OMX 技能仓库。仓库内包含可安装的技能包、可复用的 PowerShell REST 辅助脚本，以及围绕本地化 Azure DevOps 场景整理的参考文档，用来保证调用方式一致、先预览后写入，并清晰声明支持边界。
+这是一个面向 Azure DevOps Server 2020/2022，并对较老 TFS 版本提供尽力支持的 Azure DevOps Server PowerShell 工具仓库。仓库内包含可复用的 REST 辅助脚本、可安装的技能包，以及围绕本地化 Azure DevOps 场景整理的参考文档，用来保证调用方式一致、先预览后写入，并清晰声明支持边界。
 
 ## 仓库提供的内容
 
@@ -13,7 +13,7 @@
 - 一个适用于 collection、project、team 范围的 Azure DevOps Server REST 包装器
 - 一个用于鉴权、API 版本和条件性 release 支持检测的连接自检脚本
 - 面向仓库、工作项、work/team 路由、URL 结构和 API 版本的参考文档
-- 适配 Codex/OpenAI 风格技能注册的 agent 元数据
+- 用于技能注册的 agent 元数据
 
 ## 支持范围
 
@@ -59,7 +59,7 @@
 - 以下认证方式之一：
   - 通过 `default-credentials` 使用 Windows 集成认证
   - 通过 `pat` 使用个人访问令牌
-- 一个本地 Codex/OMX skills 目录，用于将技能安装到代理环境中
+- 一个本地 skills 目录，用于将内置技能包安装到代理环境中
 
 ## 安装
 
