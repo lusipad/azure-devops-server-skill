@@ -3,6 +3,8 @@
 [![Validate](https://github.com/lusipad/azure-devops-server-skill/actions/workflows/validate.yml/badge.svg)](https://github.com/lusipad/azure-devops-server-skill/actions/workflows/validate.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
+Languages: [English](README.md) | [简体中文](README.zh-CN.md)
+
 PowerShell-backed Codex/OMX skill for Azure DevOps Server 2020/2022 and best-effort older TFS deployments. The repository packages an installable skill, reusable REST helpers, and focused reference notes so on-prem Azure DevOps work stays consistent, preview-first, and honest about support boundaries.
 
 ## What This Repository Provides
@@ -46,6 +48,7 @@ Target support policy:
 |-- CONTRIBUTING.md
 |-- LICENSE
 |-- README.md
+|-- README.zh-CN.md
 `-- SECURITY.md
 ```
 
