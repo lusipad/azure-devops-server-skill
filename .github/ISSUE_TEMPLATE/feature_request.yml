@@ -1,0 +1,45 @@
+name: Feature request
+description: Propose a new supported workflow or improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What workflow is missing or painful today?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Target area
+      options:
+        - core/projects
+        - git
+        - wit
+        - build
+        - work
+        - release
+        - docs
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the desired command, route shape, or documentation change.
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints or server assumptions
+      description: Server version, auth constraints, unsupported APIs, or compatibility limits.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing workarounds or rejected approaches.

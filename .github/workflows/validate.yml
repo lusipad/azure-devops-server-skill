@@ -1,0 +1,60 @@
+name: Validate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse PowerShell scripts
+        shell: pwsh
+        run: |
+          $files = @(
+            "azure-devops-server/scripts/AzureDevOpsServer.psm1",
+            "azure-devops-server/scripts/Invoke-AzureDevOpsServerApi.ps1",
+            "azure-devops-server/scripts/Test-AzureDevOpsServerConnection.ps1"
+          )
+
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $messages = $errors | ForEach-Object { $_.Message }
+              throw "Parse errors in $file`n$($messages -join "`n")"
+            }
+          }
+
+      - name: Import module and smoke-check support matrix
+        shell: pwsh
+        run: |
+          Import-Module .\azure-devops-server\scripts\AzureDevOpsServer.psm1 -Force
+          $matrix = Get-AzureDevOpsServerSupportMatrix
+          if (-not $matrix -or $matrix.Count -lt 5) {
+            throw "Expected support matrix entries were not returned."
+          }
+
+      - name: Verify repository metadata files
+        shell: pwsh
+        run: |
+          $required = @(
+            "README.md",
+            "CONTRIBUTING.md",
+            "SECURITY.md",
+            "LICENSE",
+            "azure-devops-server/SKILL.md",
+            "azure-devops-server/agents/openai.yaml"
+          )
+
+          foreach ($path in $required) {
+            if (-not (Test-Path $path)) {
+              throw "Missing required file: $path"
+            }
+          }

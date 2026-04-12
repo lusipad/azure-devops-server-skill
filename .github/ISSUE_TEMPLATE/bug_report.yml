@@ -1,0 +1,70 @@
+name: Bug report
+description: Report a defect in the skill, scripts, or documentation.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which area is affected?
+      options:
+        - core/projects
+        - git
+        - wit
+        - build
+        - work
+        - release
+        - docs
+        - installation
+    validations:
+      required: true
+  - type: dropdown
+    id: server_version
+    attributes:
+      label: Server version
+      description: Which Azure DevOps Server / TFS version are you targeting?
+      options:
+        - Azure DevOps Server 2022
+        - Azure DevOps Server 2020
+        - TFS / legacy
+        - Unknown
+    validations:
+      required: true
+  - type: dropdown
+    id: auth_mode
+    attributes:
+      label: Auth mode
+      options:
+        - pat
+        - default-credentials
+        - unknown
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command or workflow
+      description: Share the exact command or the relevant skill workflow step. Remove secrets.
+      placeholder: pwsh -File .\azure-devops-server\scripts\Invoke-AzureDevOpsServerApi.ps1 ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Logs or dry-run output
+      description: Paste sanitized output, stack traces, or dry-run previews.
+      render: shell

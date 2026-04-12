@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage and installation guide
+    url: https://github.com/lusipad/azure-devops-server-skill/blob/main/README.md
+    about: Check the README and bundled references before opening an issue.
