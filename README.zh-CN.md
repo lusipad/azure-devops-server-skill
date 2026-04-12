@@ -61,6 +61,36 @@
   - 通过 `pat` 使用个人访问令牌
 - 一个本地 skills 目录，用于将内置技能包安装到代理环境中
 
+## 认证方式
+
+这个工具同时支持 Windows 集成认证和 PAT 认证。
+
+- `default-credentials`
+  在已经具备目标 Azure DevOps Server 访问权限的 Windows 主机上优先推荐。脚本会直接使用当前 Windows 身份；如果没有显式设置 `AZURE_DEVOPS_SERVER_AUTH_MODE`，默认也会走这个模式。
+- `pat`
+  当集成认证不可用，或者自动化场景需要显式令牌时使用。
+
+Windows 集成认证示例：
+
+```powershell
+$env:AZURE_DEVOPS_SERVER_COLLECTION_URL = "https://ado-server/tfs/DefaultCollection"
+$env:AZURE_DEVOPS_SERVER_AUTH_MODE = "default-credentials"
+
+pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1
+```
+
+PAT 示例：
+
+```powershell
+$env:AZURE_DEVOPS_SERVER_COLLECTION_URL = "https://ado-server/tfs/DefaultCollection"
+$env:AZURE_DEVOPS_SERVER_AUTH_MODE = "pat"
+$env:AZURE_DEVOPS_SERVER_PAT = "<token>"
+
+pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1
+```
+
+更完整的认证说明见 [auth-and-configuration.md](azure-devops-server/references/auth-and-configuration.md)。
+
 ## 安装
 
 克隆仓库后，将 `azure-devops-server/` 目录复制到你的本地 skills 目录中。
@@ -81,7 +111,7 @@ Copy-Item -Recurse -Force `
 优先使用以下环境变量：
 
 - `AZURE_DEVOPS_SERVER_COLLECTION_URL`
-- `AZURE_DEVOPS_SERVER_AUTH_MODE`，取值为 `pat` 或 `default-credentials`
+- `AZURE_DEVOPS_SERVER_AUTH_MODE`，取值为 `pat` 或 `default-credentials`，默认是 `default-credentials`
 - `AZURE_DEVOPS_SERVER_PAT`，当认证模式为 `pat` 时必需
 - `AZURE_DEVOPS_SERVER_PROJECT`，可选，默认项目
 - `AZURE_DEVOPS_SERVER_TEAM`，可选，默认团队

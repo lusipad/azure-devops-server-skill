@@ -61,6 +61,36 @@ Target support policy:
   - Personal Access Token via `pat`
 - A local skills directory if you want to install the bundled skill into your agent environment
 
+## Authentication
+
+This toolkit supports both Windows integrated auth and PAT-based auth.
+
+- `default-credentials`
+  Recommended on Windows hosts that already have access to the target Azure DevOps Server. The scripts use the current Windows identity, and this is the default mode when `AZURE_DEVOPS_SERVER_AUTH_MODE` is not set.
+- `pat`
+  Use this when integrated auth is unavailable or when controlled automation needs an explicit token.
+
+Windows integrated auth example:
+
+```powershell
+$env:AZURE_DEVOPS_SERVER_COLLECTION_URL = "https://ado-server/tfs/DefaultCollection"
+$env:AZURE_DEVOPS_SERVER_AUTH_MODE = "default-credentials"
+
+pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1
+```
+
+PAT example:
+
+```powershell
+$env:AZURE_DEVOPS_SERVER_COLLECTION_URL = "https://ado-server/tfs/DefaultCollection"
+$env:AZURE_DEVOPS_SERVER_AUTH_MODE = "pat"
+$env:AZURE_DEVOPS_SERVER_PAT = "<token>"
+
+pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1
+```
+
+For more auth details, see [auth-and-configuration.md](azure-devops-server/references/auth-and-configuration.md).
+
 ## Install
 
 Clone the repository, then copy the `azure-devops-server/` folder into your local skills directory.
@@ -81,7 +111,7 @@ If your environment uses a different skill directory, place the folder there ins
 Preferred environment variables:
 
 - `AZURE_DEVOPS_SERVER_COLLECTION_URL`
-- `AZURE_DEVOPS_SERVER_AUTH_MODE` as `pat` or `default-credentials`
+- `AZURE_DEVOPS_SERVER_AUTH_MODE` as `pat` or `default-credentials` and defaults to `default-credentials`
 - `AZURE_DEVOPS_SERVER_PAT` when auth mode is `pat`
 - `AZURE_DEVOPS_SERVER_PROJECT` optional default project
 - `AZURE_DEVOPS_SERVER_TEAM` optional default team
