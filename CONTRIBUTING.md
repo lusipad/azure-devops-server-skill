@@ -9,7 +9,7 @@ Keep changes aligned with these rules:
 - Prefer small, reviewable pull requests.
 - Reuse the existing PowerShell helpers instead of adding duplicate REST logic.
 - Keep write safety intact: `-DryRun` first, then explicit `-AllowWrite`.
-- Preserve honest support boundaries for deferred and conditional areas.
+- Preserve honest support boundaries for supported, conditional, and route-limited areas.
 - Update docs and references together with script behavior.
 
 ## Development Setup
@@ -29,29 +29,30 @@ Optional for live testing:
 Run these checks before opening a pull request:
 
 ```powershell
-$files = @(
-  "azure-devops-server/scripts/AzureDevOpsServer.psm1",
-  "azure-devops-server/scripts/Invoke-AzureDevOpsServerApi.ps1",
-  "azure-devops-server/scripts/Test-AzureDevOpsServerConnection.ps1"
-)
-
-foreach ($file in $files) {
-  $tokens = $null
-  $errors = $null
-  [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
-  if ($errors.Count -gt 0) {
-    throw "Parse errors in $file"
-  }
-}
-
-Import-Module .\azure-devops-server\scripts\AzureDevOpsServer.psm1 -Force
-Get-AzureDevOpsServerSupportMatrix | Format-Table -AutoSize
+pwsh -File .\tests\Validate-AzureDevOpsServerSkill.ps1
 ```
+
+Optional non-production smoke harness:
+
+```powershell
+$env:AZURE_DEVOPS_SERVER_SMOKE = "1"
+$env:AZURE_DEVOPS_SERVER_COLLECTION_URL = "https://ado-server/tfs/DefaultCollection"
+$env:AZURE_DEVOPS_SERVER_AUTH_MODE = "default-credentials"
+$env:AZURE_DEVOPS_SERVER_PROJECT = "Fabrikam"
+
+pwsh -File .\tests\Smoke-AzureDevOpsServerSkill.ps1
+```
+
+Without the explicit smoke env vars, the smoke harness should report a skip and exit successfully.
 
 If your change affects examples, routes, support claims, or bootstrap behavior, update:
 
+- `azure-devops-server/support-contract.json`
 - `azure-devops-server/SKILL.md`
 - `azure-devops-server/references/*.md`
+- `.omx/plans/*.md`
+- `tests/Validate-AzureDevOpsServerSkill.ps1`
+- `tests/Smoke-AzureDevOpsServerSkill.ps1`
 - Script comments or examples in the repository root docs when needed
 
 ## Pull Requests

@@ -1,6 +1,6 @@
 ---
 name: azure-devops-server
-description: Use for Azure DevOps Server or on-prem TFS/Azure DevOps REST work when Codex needs to inspect projects, repositories, pull requests, work items, WIQL queries, builds, or conditionally releases on a collection URL. Triggers include "Azure DevOps Server", "on-prem Azure DevOps", "TFS", collection-based REST calls, Windows-auth/PAT automation, and cases where the official Azure DevOps MCP for Azure DevOps Services is not the right fit.
+description: Use for Azure DevOps Server or on-prem TFS/Azure DevOps REST work when Codex needs to inspect projects, repositories, pull requests, work items, WIQL queries, wikis, search routes, test plans, test runs, test results, builds, or conditionally releases on a collection URL. Triggers include "Azure DevOps Server", "on-prem Azure DevOps", "TFS", collection-based REST calls, Windows-auth/PAT automation, and cases where the official Azure DevOps MCP for Azure DevOps Services is not the right fit.
 ---
 
 # Azure DevOps Server
@@ -23,8 +23,9 @@ Support policy:
 - First-class: Azure DevOps Server 2020 and 2022
 - Best-effort: older TFS
 - Required: `projects`, `git`, `wit`, `build`, `work`
-- Conditional: `release`
-- Deferred: `wiki`, `search`, `test`, `testresults`, `advanced security`, `MCP-app` style integrations, and other cloud-only domains
+- Supported: `wiki`, `testplan`, `test`
+- Conditional: `release`, `search`, `testresults`
+- Deferred: `advanced security`, `MCP-app` style integrations, and other cloud-only domains
 
 ### 2. Collect configuration and bootstrap the connection
 
@@ -37,6 +38,8 @@ Prefer environment variables:
 - `AZURE_DEVOPS_SERVER_TEAM` optional default team for team-scoped `work` routes
 - `AZURE_DEVOPS_SERVER_API_VERSION` optional override
 - `AZURE_DEVOPS_SERVER_SERVER_VERSION` optional hint: `2022`, `2020`, `2019`, `2018`, `2017`, `2015`, or `legacy`
+- `AZURE_DEVOPS_SERVER_SEARCH_BASE_URL` optional override when search is exposed on a dedicated host
+- `AZURE_DEVOPS_SERVER_TESTRESULTS_BASE_URL` optional override when test results are exposed on a dedicated host
 
 The helpers also fall back to pipeline-style variables when available:
 
@@ -48,6 +51,8 @@ Run the bootstrap helper before other workflows:
 ```powershell
 pwsh -File .\scripts\Test-AzureDevOpsServerConnection.ps1
 pwsh -File .\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckReleaseArea
+pwsh -File .\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckSearchArea
+pwsh -File .\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckTestResultsArea
 pwsh -File .\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckReleaseArea -DryRun
 ```
 
@@ -75,8 +80,14 @@ pwsh -File .\scripts\Invoke-AzureDevOpsServerApi.ps1 `
 
 Read [references/workflow-recipes.md](references/workflow-recipes.md) for common routes.
 Read [references/work-support.md](references/work-support.md) for team settings, iterations, backlogs, and capacity routes.
+Read [references/build-support.md](references/build-support.md) for build definitions, builds, logs, artifacts, and queue previews.
+Read [references/release-support.md](references/release-support.md) for release definitions, releases, environments, deployments, and preview-first mutation flows.
 Read [references/repo-support.md](references/repo-support.md) for repository, branch, and pull-request routes.
 Read [references/work-item-support.md](references/work-item-support.md) for work item, WIQL, query, comment, and JSON Patch routes.
+Read [references/wiki-support.md](references/wiki-support.md) for wiki listing, page reads, and pages-batch routes.
+Read [references/search-support.md](references/search-support.md) for search routes and host/base-URL caveats.
+Read [references/test-support.md](references/test-support.md) for test plans, suites, runs, and run-scoped result routes.
+Read [references/test-results-support.md](references/test-results-support.md) for build-linked and work-item-linked test result routes.
 Read [references/api-version-matrix.md](references/api-version-matrix.md) before changing `api-version`.
 
 ### 4. Treat writes as explicit and preview-first
@@ -92,10 +103,13 @@ The wrapper refuses live writes unless `-AllowWrite` is present.
 
 Use `-JsonPatch` only for work item patch payloads.
 
-### 5. Handle conditional and deferred areas honestly
+### 5. Handle conditional and route-limited areas honestly
 
 - `release` is conditional. Run `Test-AzureDevOpsServerConnection.ps1 -CheckReleaseArea` first and use `-AllowConditionalArea` only after the probe succeeds.
-- Deferred areas must fail clearly. Do not fake Azure DevOps Services parity.
+- `search` is conditional. Run `Test-AzureDevOpsServerConnection.ps1 -CheckSearchArea` first. Set `AZURE_DEVOPS_SERVER_SEARCH_BASE_URL` when the deployment uses a dedicated search host.
+- `testresults` is conditional. Run `Test-AzureDevOpsServerConnection.ps1 -CheckTestResultsArea` first. Set `AZURE_DEVOPS_SERVER_TESTRESULTS_BASE_URL` when the deployment uses a dedicated test results host.
+- Only explicitly allowlisted POST read routes bypass write gating.
+- Deferred cloud-only domains must still fail clearly. Do not fake Azure DevOps Services parity.
 - If the server behaves like an older or nonstandard TFS deployment, report that it is outside first-class support instead of guessing.
 
 ### 6. Escalate to references only when needed
@@ -105,5 +119,11 @@ Use `-JsonPatch` only for work item patch payloads.
 - Version-selection guidance: [references/api-version-matrix.md](references/api-version-matrix.md)
 - Common task recipes: [references/workflow-recipes.md](references/workflow-recipes.md)
 - Team iterations, team settings, backlogs, and capacity: [references/work-support.md](references/work-support.md)
+- Builds, timelines, artifacts, and queue previews: [references/build-support.md](references/build-support.md)
+- Release definitions, releases, environments, and deployments: [references/release-support.md](references/release-support.md)
 - Repositories, branches, and pull requests: [references/repo-support.md](references/repo-support.md)
 - Work items, WIQL, saved queries, comments, and revisions: [references/work-item-support.md](references/work-item-support.md)
+- Wikis and wiki pages: [references/wiki-support.md](references/wiki-support.md)
+- Search routes and caveats: [references/search-support.md](references/search-support.md)
+- Test plans, suites, and runs: [references/test-support.md](references/test-support.md)
+- Build- and work-item-linked test results: [references/test-results-support.md](references/test-results-support.md)

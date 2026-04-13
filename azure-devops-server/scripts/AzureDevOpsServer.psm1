@@ -7,10 +7,11 @@ $script:AreaPolicies = [ordered]@{
     build       = "required"
     work        = "required"
     release     = "conditional"
-    wiki        = "deferred"
-    search      = "deferred"
-    test        = "deferred"
-    testresults = "deferred"
+    wiki        = "supported"
+    search      = "conditional"
+    testplan    = "supported"
+    test        = "supported"
+    testresults = "conditional"
 }
 
 function Get-AzureDevOpsServerSupportMatrix {
@@ -101,7 +102,9 @@ function Get-AzureDevOpsServerConfiguration {
         [string]$AuthMode,
         [string]$Pat,
         [string]$ApiVersion,
-        [string]$ServerVersionHint
+        [string]$ServerVersionHint,
+        [string]$SearchBaseUrl,
+        [string]$TestResultsBaseUrl
     )
 
     $effectiveCollectionUrl = if ($CollectionUrl) {
@@ -183,18 +186,73 @@ function Get-AzureDevOpsServerConfiguration {
         throw "Auth mode 'pat' requires AZURE_DEVOPS_SERVER_PAT or the -Pat parameter."
     }
 
+    $rawApiVersion = if (-not [string]::IsNullOrWhiteSpace($ApiVersion)) {
+        $ApiVersion
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($env:AZURE_DEVOPS_SERVER_API_VERSION)) {
+        $env:AZURE_DEVOPS_SERVER_API_VERSION
+    }
+    else {
+        $null
+    }
+
     $normalizedCollectionUrl = Normalize-AzureDevOpsServerCollectionUrl -CollectionUrl $effectiveCollectionUrl
-    $resolvedApiVersion = Resolve-AzureDevOpsServerApiVersion -ApiVersion $ApiVersion -ServerVersionHint $effectiveServerVersionHint
+    $resolvedApiVersion = Resolve-AzureDevOpsServerApiVersion -ApiVersion $rawApiVersion -ServerVersionHint $effectiveServerVersionHint
+    $effectiveSearchBaseUrl = if ($SearchBaseUrl) {
+        Normalize-AzureDevOpsServerCollectionUrl -CollectionUrl $SearchBaseUrl
+    }
+    elseif ($env:AZURE_DEVOPS_SERVER_SEARCH_BASE_URL) {
+        Normalize-AzureDevOpsServerCollectionUrl -CollectionUrl $env:AZURE_DEVOPS_SERVER_SEARCH_BASE_URL
+    }
+    else {
+        $null
+    }
+    $effectiveTestResultsBaseUrl = if ($TestResultsBaseUrl) {
+        Normalize-AzureDevOpsServerCollectionUrl -CollectionUrl $TestResultsBaseUrl
+    }
+    elseif ($env:AZURE_DEVOPS_SERVER_TESTRESULTS_BASE_URL) {
+        Normalize-AzureDevOpsServerCollectionUrl -CollectionUrl $env:AZURE_DEVOPS_SERVER_TESTRESULTS_BASE_URL
+    }
+    else {
+        $null
+    }
 
     return [pscustomobject]@{
-        CollectionUrl     = $normalizedCollectionUrl
-        Project           = $effectiveProject
-        Team              = $effectiveTeam
-        AuthMode          = $effectiveAuthMode
-        Pat               = $effectivePat
-        ApiVersion        = $resolvedApiVersion
-        ServerVersionHint = $effectiveServerVersionHint
+        CollectionUrl       = $normalizedCollectionUrl
+        Project             = $effectiveProject
+        Team                = $effectiveTeam
+        AuthMode            = $effectiveAuthMode
+        Pat                 = $effectivePat
+        ApiVersion          = $resolvedApiVersion
+        ServerVersionHint   = $effectiveServerVersionHint
+        SearchBaseUrl       = $effectiveSearchBaseUrl
+        TestResultsBaseUrl  = $effectiveTestResultsBaseUrl
     }
+}
+
+function Get-AzureDevOpsServerAreaBaseUrl {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [pscustomobject]$Configuration,
+        [Parameter(Mandatory)]
+        [pscustomobject]$Policy
+    )
+
+    switch ($Policy.Area) {
+        "search" {
+            if ($Configuration.SearchBaseUrl) {
+                return $Configuration.SearchBaseUrl
+            }
+        }
+        "testresults" {
+            if ($Configuration.TestResultsBaseUrl) {
+                return $Configuration.TestResultsBaseUrl
+            }
+        }
+    }
+
+    return $Configuration.CollectionUrl
 }
 
 function Get-AzureDevOpsServerAreaPolicy {
@@ -233,12 +291,24 @@ function Assert-AzureDevOpsServerAreaSupported {
     $policy = Get-AzureDevOpsServerAreaPolicy -Area $Area
 
     switch ($policy.Support) {
-        "deferred" {
-            throw "Area '$($policy.Area)' is deferred for this skill. Use the official Azure DevOps Services tooling when appropriate or add explicit server-side validation before extending support."
-        }
         "conditional" {
             if (-not $AllowConditionalArea) {
-                throw "Area '$($policy.Area)' is conditional. Run Test-AzureDevOpsServerConnection.ps1 -CheckReleaseArea first, then retry with -AllowConditionalArea only after the probe succeeds."
+                $message = switch ($policy.Area) {
+                    "release" {
+                        "Area 'release' is conditional. Run Test-AzureDevOpsServerConnection.ps1 -CheckReleaseArea first, then retry with -AllowConditionalArea only after the probe succeeds."
+                    }
+                    "search" {
+                        "Area 'search' is conditional. Run Test-AzureDevOpsServerConnection.ps1 -CheckSearchArea first, optionally set AZURE_DEVOPS_SERVER_SEARCH_BASE_URL when this deployment uses a dedicated search host, then retry with -AllowConditionalArea only after the probe succeeds."
+                    }
+                    "testresults" {
+                        "Area 'testresults' is conditional. Run Test-AzureDevOpsServerConnection.ps1 -CheckTestResultsArea first, optionally set AZURE_DEVOPS_SERVER_TESTRESULTS_BASE_URL when this deployment uses a dedicated test results host, then retry with -AllowConditionalArea only after the probe succeeds."
+                    }
+                    default {
+                        "Area '$($policy.Area)' is conditional. Probe the target server first, then retry with -AllowConditionalArea only after the probe succeeds."
+                    }
+                }
+
+                throw $message
             }
         }
     }
@@ -253,16 +323,27 @@ function Test-AzureDevOpsServerCollectionScopedResource {
         [string]$Resource
     )
 
-    if (-not [string]::IsNullOrWhiteSpace($Area)) {
-        return $false
-    }
-
     if ([string]::IsNullOrWhiteSpace($Resource)) {
         return $false
     }
 
+    $normalizedArea = if ([string]::IsNullOrWhiteSpace($Area)) {
+        ""
+    }
+    else {
+        $Area.Trim().ToLowerInvariant()
+    }
     $normalizedResource = $Resource.Trim("/").ToLowerInvariant()
-    return ($normalizedResource -match "^(projects|teams)(/|$)")
+
+    if ([string]::IsNullOrWhiteSpace($normalizedArea)) {
+        return ($normalizedResource -match "^(projects|teams)(/|$)")
+    }
+
+    if ($normalizedArea -eq "wiki" -and $normalizedResource -eq "wikis") {
+        return $true
+    }
+
+    return $false
 }
 
 function Test-AzureDevOpsServerSafeReadRoute {
@@ -296,11 +377,24 @@ function Test-AzureDevOpsServerSafeReadRoute {
         $Resource.Trim("/").ToLowerInvariant()
     }
 
-    if ($normalizedArea -eq "wit" -and $normalizedResource -eq "wiql") {
-        return $true
+    switch ($normalizedArea) {
+        "wit" {
+            return ($normalizedResource -eq "wiql")
+        }
+        "wiki" {
+            return ($normalizedResource -match "^wikis/[^/]+/pagesbatch$")
+        }
+        "search" {
+            return ($normalizedResource -in @(
+                    "workitemsearchresults",
+                    "codesearchresults",
+                    "wikisearchresults"
+                ))
+        }
+        default {
+            return $false
+        }
     }
-
-    return $false
 }
 
 function ConvertTo-AzureDevOpsServerQueryString {
@@ -548,6 +642,8 @@ function Invoke-AzureDevOpsServerRequest {
         [string]$Pat,
         [string]$ApiVersion,
         [string]$ServerVersionHint,
+        [string]$SearchBaseUrl,
+        [string]$TestResultsBaseUrl,
         [switch]$AllowConditionalArea,
         [switch]$DryRun,
         [switch]$JsonPatch,
@@ -561,11 +657,14 @@ function Invoke-AzureDevOpsServerRequest {
         -AuthMode $AuthMode `
         -Pat $Pat `
         -ApiVersion $ApiVersion `
-        -ServerVersionHint $ServerVersionHint
+        -ServerVersionHint $ServerVersionHint `
+        -SearchBaseUrl $SearchBaseUrl `
+        -TestResultsBaseUrl $TestResultsBaseUrl
 
     $policy = Assert-AzureDevOpsServerAreaSupported -Area $Area -AllowConditionalArea:$AllowConditionalArea
     $effectiveProject = $configuration.Project
     $effectiveTeam = $null
+    $baseUrl = Get-AzureDevOpsServerAreaBaseUrl -Configuration $configuration -Policy $policy
 
     if (Test-AzureDevOpsServerCollectionScopedResource -Area $Area -Resource $Resource) {
         $effectiveProject = $null
@@ -578,7 +677,7 @@ function Invoke-AzureDevOpsServerRequest {
     }
 
     $requestUri = New-AzureDevOpsServerApiUri `
-        -CollectionUrl $configuration.CollectionUrl `
+        -CollectionUrl $baseUrl `
         -Project $effectiveProject `
         -Team $effectiveTeam `
         -Area $Area `
@@ -599,6 +698,7 @@ function Invoke-AzureDevOpsServerRequest {
     $preview = [pscustomobject]@{
         Method            = $Method
         Uri               = $requestUri
+        BaseUrl           = $baseUrl
         Area              = $policy.Area
         AreaSupport       = $policy.Support
         AuthMode          = $configuration.AuthMode
@@ -665,7 +765,11 @@ function Test-AzureDevOpsServerBootstrap {
         [string]$Pat,
         [string]$ApiVersion,
         [string]$ServerVersionHint,
+        [string]$SearchBaseUrl,
+        [string]$TestResultsBaseUrl,
         [switch]$CheckReleaseArea,
+        [switch]$CheckSearchArea,
+        [switch]$CheckTestResultsArea,
         [switch]$DryRun
     )
 
@@ -676,7 +780,9 @@ function Test-AzureDevOpsServerBootstrap {
         -AuthMode $AuthMode `
         -Pat $Pat `
         -ApiVersion $ApiVersion `
-        -ServerVersionHint $ServerVersionHint
+        -ServerVersionHint $ServerVersionHint `
+        -SearchBaseUrl $SearchBaseUrl `
+        -TestResultsBaseUrl $TestResultsBaseUrl
 
     $projectsUri = New-AzureDevOpsServerApiUri `
         -CollectionUrl $configuration.CollectionUrl `
@@ -686,7 +792,8 @@ function Test-AzureDevOpsServerBootstrap {
         -ApiVersion $configuration.ApiVersion `
         -Query @{ '$top' = 1 }
 
-    $releaseProbeProject = if ($configuration.Project) { $configuration.Project } else { "<project-required-for-release-probe>" }
+    $probeProjectFallback = "<project-required-for-conditional-probes>"
+    $releaseProbeProject = if ($configuration.Project) { $configuration.Project } else { $probeProjectFallback }
     $releaseUri = New-AzureDevOpsServerApiUri `
         -CollectionUrl $configuration.CollectionUrl `
         -Project $releaseProbeProject `
@@ -694,6 +801,24 @@ function Test-AzureDevOpsServerBootstrap {
         -Resource "definitions" `
         -ApiVersion $configuration.ApiVersion `
         -Query @{ '$top' = 1 }
+    $searchProbeProject = if ($configuration.Project) { $configuration.Project } else { $probeProjectFallback }
+    $searchProbeBaseUrl = if ($configuration.SearchBaseUrl) { $configuration.SearchBaseUrl } else { $configuration.CollectionUrl }
+    $searchProbeUri = New-AzureDevOpsServerApiUri `
+        -CollectionUrl $searchProbeBaseUrl `
+        -Project $searchProbeProject `
+        -Area "search" `
+        -Resource "workitemsearchresults" `
+        -ApiVersion $configuration.ApiVersion `
+        -Query @{}
+    $testResultsProbeProject = if ($configuration.Project) { $configuration.Project } else { $probeProjectFallback }
+    $testResultsProbeBaseUrl = if ($configuration.TestResultsBaseUrl) { $configuration.TestResultsBaseUrl } else { $configuration.CollectionUrl }
+    $testResultsProbeUri = New-AzureDevOpsServerApiUri `
+        -CollectionUrl $testResultsProbeBaseUrl `
+        -Project $testResultsProbeProject `
+        -Area "testresults" `
+        -Resource "settings" `
+        -ApiVersion $configuration.ApiVersion `
+        -Query @{}
 
     if ($DryRun) {
         return [pscustomobject]@{
@@ -708,7 +833,13 @@ function Test-AzureDevOpsServerBootstrap {
             ReleaseAreaStatus      = if ($CheckReleaseArea) { "dry-run" } else { "not-requested" }
             ReleaseProbeUri        = if ($CheckReleaseArea) { $releaseUri } else { $null }
             ReleaseAreaMessage     = if ($CheckReleaseArea) { "Dry-run only. No live request was sent." } else { "Release probe not requested." }
-            SampleProjectForProbes = $releaseProbeProject
+            SearchAreaStatus       = if ($CheckSearchArea) { "dry-run" } else { "not-requested" }
+            SearchProbeUri         = if ($CheckSearchArea) { $searchProbeUri } else { $null }
+            SearchAreaMessage      = if ($CheckSearchArea) { "Dry-run only. No live request was sent. Set AZURE_DEVOPS_SERVER_SEARCH_BASE_URL if this deployment uses a dedicated search host." } else { "Search probe not requested." }
+            TestResultsAreaStatus  = if ($CheckTestResultsArea) { "dry-run" } else { "not-requested" }
+            TestResultsProbeUri    = if ($CheckTestResultsArea) { $testResultsProbeUri } else { $null }
+            TestResultsAreaMessage = if ($CheckTestResultsArea) { "Dry-run only. No live request was sent. Set AZURE_DEVOPS_SERVER_TESTRESULTS_BASE_URL if this deployment uses a dedicated test results host." } else { "Test results probe not requested." }
+            SampleProjectForProbes = if ($configuration.Project) { $configuration.Project } else { $probeProjectFallback }
         }
     }
 
@@ -736,6 +867,10 @@ function Test-AzureDevOpsServerBootstrap {
 
     $releaseStatus = "not-checked"
     $releaseMessage = "Release probe not requested."
+    $searchStatus = "not-checked"
+    $searchMessage = "Search probe not requested."
+    $testResultsStatus = "not-checked"
+    $testResultsMessage = "Test results probe not requested."
 
     if ($CheckReleaseArea) {
         if ([string]::IsNullOrWhiteSpace($sampleProject)) {
@@ -767,6 +902,68 @@ function Test-AzureDevOpsServerBootstrap {
         }
     }
 
+    if ($CheckSearchArea) {
+        if ([string]::IsNullOrWhiteSpace($sampleProject)) {
+            $searchStatus = "project-required"
+            $searchMessage = "Search probe skipped because no project was configured and no sample project was available."
+        }
+        else {
+            try {
+                $null = Invoke-AzureDevOpsServerRequest `
+                    -Method "POST" `
+                    -Area "search" `
+                    -Resource "workitemsearchresults" `
+                    -Project $sampleProject `
+                    -Body @{ searchText = "a"; '$top' = 1 } `
+                    -CollectionUrl $configuration.CollectionUrl `
+                    -SearchBaseUrl $configuration.SearchBaseUrl `
+                    -AuthMode $configuration.AuthMode `
+                    -Pat $configuration.Pat `
+                    -ApiVersion $configuration.ApiVersion `
+                    -ServerVersionHint $configuration.ServerVersionHint `
+                    -AllowConditionalArea
+
+                $searchStatus = "available"
+                $searchMessage = "Search endpoint responded successfully."
+            }
+            catch {
+                $searchStatus = "probe-failed"
+                $searchMessage = "Representative search probe failed. The deployment may still require a different base URL, api-version, or search/index configuration. $($_.Exception.Message)"
+            }
+        }
+    }
+
+    if ($CheckTestResultsArea) {
+        if ([string]::IsNullOrWhiteSpace($sampleProject)) {
+            $testResultsStatus = "project-required"
+            $testResultsMessage = "Test results probe skipped because no project was configured and no sample project was available."
+        }
+        else {
+            try {
+                $null = Invoke-AzureDevOpsServerRequest `
+                    -Method "GET" `
+                    -Area "testresults" `
+                    -Resource "settings" `
+                    -Project $sampleProject `
+                    -Query @{} `
+                    -CollectionUrl $configuration.CollectionUrl `
+                    -TestResultsBaseUrl $configuration.TestResultsBaseUrl `
+                    -AuthMode $configuration.AuthMode `
+                    -Pat $configuration.Pat `
+                    -ApiVersion $configuration.ApiVersion `
+                    -ServerVersionHint $configuration.ServerVersionHint `
+                    -AllowConditionalArea
+
+                $testResultsStatus = "available"
+                $testResultsMessage = "Test results settings endpoint responded successfully."
+            }
+            catch {
+                $testResultsStatus = "probe-failed"
+                $testResultsMessage = "Representative test results probe failed. The deployment may still require a different base URL or api-version for the tested route. $($_.Exception.Message)"
+            }
+        }
+    }
+
     return [pscustomobject]@{
         CollectionUrl          = $configuration.CollectionUrl
         Project                = $configuration.Project
@@ -780,6 +977,12 @@ function Test-AzureDevOpsServerBootstrap {
         RequiredReadBootstrap  = "ok"
         ReleaseAreaStatus      = $releaseStatus
         ReleaseAreaMessage     = $releaseMessage
+        SearchProbeUri         = if ($CheckSearchArea) { $searchProbeUri } else { $null }
+        SearchAreaStatus       = $searchStatus
+        SearchAreaMessage      = $searchMessage
+        TestResultsProbeUri    = if ($CheckTestResultsArea) { $testResultsProbeUri } else { $null }
+        TestResultsAreaStatus  = $testResultsStatus
+        TestResultsAreaMessage = $testResultsMessage
     }
 }
 

@@ -11,8 +11,8 @@ PowerShell-backed Azure DevOps Server toolkit for Azure DevOps Server 2020/2022 
 
 - An installable skill package under `azure-devops-server/`
 - A generic REST wrapper for collection-, project-, and team-scoped Azure DevOps Server routes
-- A bootstrap connection probe for auth, API version, and conditional release support
-- Reference guides for repositories, work items, work/team routes, URL shape, and API versions
+- A bootstrap connection probe for auth, API version, and conditional area support
+- Reference guides for repositories, work items, builds, releases, wiki, search, test routes, URL shape, and API versions
 - Agent metadata for skill registration
 
 ## Support Scope
@@ -26,13 +26,18 @@ This repository is intentionally narrower than Azure DevOps Services tooling.
 | `wit` | Required |
 | `build` | Required |
 | `work` | Required |
+| `wiki` | Supported |
+| `testplan` | Supported |
+| `test` | Supported |
 | `release` | Conditional |
-| `wiki`, `search`, `test`, `testresults` | Deferred |
+| `search` | Conditional |
+| `testresults` | Conditional |
 
 Target support policy:
 
 - First-class: Azure DevOps Server 2020 and 2022
 - Best-effort: older TFS / Azure DevOps Server variants
+- Deferred: advanced security, MCP-app integrations, and other cloud-only domains
 - Required inputs: collection URL plus PAT or Windows integrated auth
 
 ## Repository Layout
@@ -43,12 +48,14 @@ Target support policy:
 |   |-- SKILL.md
 |   |-- agents/openai.yaml
 |   |-- references/
+|   |-- support-contract.json
 |   `-- scripts/
 |-- .github/
 |-- CONTRIBUTING.md
 |-- LICENSE
 |-- README.md
 |-- README.zh-CN.md
+|-- tests/
 `-- SECURITY.md
 ```
 
@@ -117,6 +124,8 @@ Preferred environment variables:
 - `AZURE_DEVOPS_SERVER_TEAM` optional default team
 - `AZURE_DEVOPS_SERVER_API_VERSION` optional override
 - `AZURE_DEVOPS_SERVER_SERVER_VERSION` optional hint: `2022`, `2020`, `2019`, `2018`, `2017`, `2015`, or `legacy`
+- `AZURE_DEVOPS_SERVER_SEARCH_BASE_URL` optional override when search is exposed on a dedicated host
+- `AZURE_DEVOPS_SERVER_TESTRESULTS_BASE_URL` optional override when test results are exposed on a dedicated host
 
 Pipeline-style fallbacks are also supported:
 
@@ -130,6 +139,8 @@ Bootstrap the connection first:
 ```powershell
 pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1
 pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckReleaseArea
+pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckSearchArea
+pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckTestResultsArea
 pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckReleaseArea -DryRun
 ```
 
@@ -148,37 +159,82 @@ pwsh -File .\azure-devops-server\scripts\Invoke-AzureDevOpsServerApi.ps1 `
   -Resource repositories
 ```
 
+Additional supported examples:
+
+```powershell
+pwsh -File .\azure-devops-server\scripts\Invoke-AzureDevOpsServerApi.ps1 `
+  -Method GET `
+  -Area wiki `
+  -Resource wikis
+
+pwsh -File .\azure-devops-server\scripts\Invoke-AzureDevOpsServerApi.ps1 `
+  -Method GET `
+  -Area build `
+  -Project Fabrikam `
+  -Resource definitions
+
+pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1 `
+  -Project Fabrikam `
+  -CheckReleaseArea
+
+$body = @{
+  searchText = "active bug"
+  '$top' = 25
+}
+
+pwsh -File .\azure-devops-server\scripts\Invoke-AzureDevOpsServerApi.ps1 `
+  -Method POST `
+  -Area search `
+  -Project Fabrikam `
+  -Resource workitemsearchresults `
+  -Body $body `
+  -AllowConditionalArea
+```
+
 ## Safety Model
 
 - Writes are blocked unless `-AllowWrite` is present.
 - Mutating commands should be previewed with `-DryRun` first.
 - `release` routes are conditional and require a successful probe before live use.
-- Deferred areas fail clearly instead of pretending Azure DevOps Services parity.
-- `POST` is treated as safe read-only only for supported cases such as WIQL queries.
+- `search` and `testresults` are conditional because some deployments expose them on separate hosts or service topologies.
+- Only explicitly allowlisted POST read routes bypass write gating.
+
+## Reference Guides
+
+- [workflow-recipes.md](azure-devops-server/references/workflow-recipes.md) for common task patterns
+- [repo-support.md](azure-devops-server/references/repo-support.md) for repositories, branches, and pull requests
+- [work-item-support.md](azure-devops-server/references/work-item-support.md) for work items, WIQL, queries, comments, and JSON Patch routes
+- [work-support.md](azure-devops-server/references/work-support.md) for work/team settings, iterations, backlogs, and capacity
+- [build-support.md](azure-devops-server/references/build-support.md) for definitions, builds, logs, artifacts, and queue previews
+- [release-support.md](azure-devops-server/references/release-support.md) for release definitions, releases, environments, deployments, and mutation previews
+- [wiki-support.md](azure-devops-server/references/wiki-support.md) for wiki listing and page reads
+- [search-support.md](azure-devops-server/references/search-support.md) for search routes and dedicated-host caveats
+- [test-support.md](azure-devops-server/references/test-support.md) for test plans, suites, runs, and run-scoped results
+- [test-results-support.md](azure-devops-server/references/test-results-support.md) for build-linked and work-item-linked test result routes
+- [url-and-resource-areas.md](azure-devops-server/references/url-and-resource-areas.md) for collection URL shape, scoping rules, and area-routing caveats
+- [auth-and-configuration.md](azure-devops-server/references/auth-and-configuration.md) for auth modes, environment variables, and override precedence
+- [api-version-matrix.md](azure-devops-server/references/api-version-matrix.md) for server-version and `api-version` guidance
 
 ## Development
 
 Local validation:
 
 ```powershell
-$files = @(
-  "azure-devops-server/scripts/AzureDevOpsServer.psm1",
-  "azure-devops-server/scripts/Invoke-AzureDevOpsServerApi.ps1",
-  "azure-devops-server/scripts/Test-AzureDevOpsServerConnection.ps1"
-)
-
-foreach ($file in $files) {
-  $tokens = $null
-  $errors = $null
-  [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
-  if ($errors.Count -gt 0) {
-    throw "Parse errors in $file"
-  }
-}
-
-Import-Module .\azure-devops-server\scripts\AzureDevOpsServer.psm1 -Force
-Get-AzureDevOpsServerSupportMatrix
+pwsh -File .\tests\Validate-AzureDevOpsServerSkill.ps1
 ```
+
+Optional non-production smoke harness:
+
+```powershell
+$env:AZURE_DEVOPS_SERVER_SMOKE = "1"
+$env:AZURE_DEVOPS_SERVER_COLLECTION_URL = "https://ado-server/tfs/DefaultCollection"
+$env:AZURE_DEVOPS_SERVER_AUTH_MODE = "default-credentials"
+$env:AZURE_DEVOPS_SERVER_PROJECT = "Fabrikam"
+
+pwsh -File .\tests\Smoke-AzureDevOpsServerSkill.ps1
+```
+
+If the opt-in env vars are absent, the smoke harness prints a skip message and exits successfully.
 
 The same checks run in GitHub Actions on pushes and pull requests.
 

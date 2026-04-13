@@ -41,7 +41,8 @@ For this skill:
 
 - required read areas use the configured collection URL directly
 - `release` is treated as conditional and is probed explicitly
-- deferred or cloud-only areas are rejected instead of guessed
+- `wiki`, `testplan`, and `test` use the configured collection URL directly
+- `search` and `testresults` are conditional because some deployments expose them on separate hosts or with different area wiring
 
 The bootstrap helper does this:
 
@@ -69,6 +70,13 @@ Only use `-AllowConditionalArea` for release requests after that probe succeeds.
 - work items: area `wit`, resource `workitems/{id}`
 - WIQL: area `wit`, resource `wiql`
 - builds: area `build`, resource `builds`
+- wikis: area `wiki`, resource `wikis`
+- wiki pages batch: area `wiki`, resource `wikis/{wikiIdentifier}/pagesbatch`
+- search work items: area `search`, resource `workitemsearchresults`
+- test plans: area `testplan`, resource `plans`
+- test runs: area `test`, resource `runs`
+- test run results: area `test`, resource `runs/{runId}/results`
+- build-linked test summaries: area `testresults`, resource `resultsummarybybuild`
 - pull requests: area `git`, resource `repositories/{repoIdOrName}/pullrequests`
 - team iterations: area `work`, project + team set, resource `teamsettings/iterations`
 - team settings: area `work`, project + team set, resource `teamsettings`
@@ -91,5 +99,15 @@ If a route 404s on Server:
 - verify project scoping
 - verify team scoping
 - verify the api-version
-- verify the area is not deferred or conditional
+- verify whether the area is conditional or uses a dedicated base URL
 - treat older TFS as outside first-class support until proven otherwise
+
+## Service-Specific Host Caveat
+
+Some Microsoft Learn pages for `search` and `testresults` use Azure DevOps Services-specific hosts such as `almsearch.dev.azure.com` or `vstmr.dev.azure.com`.
+
+For this repository:
+
+- keep Azure DevOps Server requests on the configured collection URL by default
+- use `AZURE_DEVOPS_SERVER_SEARCH_BASE_URL` or `AZURE_DEVOPS_SERVER_TESTRESULTS_BASE_URL` only when the deployment actually exposes those areas on dedicated hosts
+- do not silently swap hosts to mimic Azure DevOps Services

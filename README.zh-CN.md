@@ -11,8 +11,8 @@
 
 - 位于 `azure-devops-server/` 下的可安装技能包
 - 一个适用于 collection、project、team 范围的 Azure DevOps Server REST 包装器
-- 一个用于鉴权、API 版本和条件性 release 支持检测的连接自检脚本
-- 面向仓库、工作项、work/team 路由、URL 结构和 API 版本的参考文档
+- 一个用于鉴权、API 版本和条件域支持检测的连接自检脚本
+- 面向仓库、工作项、构建、发布、Wiki、搜索、测试路由、URL 结构和 API 版本的参考文档
 - 用于技能注册的 agent 元数据
 
 ## 支持范围
@@ -26,13 +26,18 @@
 | `wit` | 必需支持 |
 | `build` | 必需支持 |
 | `work` | 必需支持 |
+| `wiki` | 已支持 |
+| `testplan` | 已支持 |
+| `test` | 已支持 |
 | `release` | 条件支持 |
-| `wiki`、`search`、`test`、`testresults` | 暂缓支持 |
+| `search` | 条件支持 |
+| `testresults` | 条件支持 |
 
 目标支持策略：
 
 - 一等支持：Azure DevOps Server 2020 和 2022
 - 尽力支持：更老的 TFS / Azure DevOps Server 变体
+- 暂缓支持：高级安全、MCP-app 集成以及其他云端专有域
 - 必需输入：collection URL，以及 PAT 或 Windows 集成认证之一
 
 ## 仓库结构
@@ -43,12 +48,14 @@
 |   |-- SKILL.md
 |   |-- agents/openai.yaml
 |   |-- references/
+|   |-- support-contract.json
 |   `-- scripts/
 |-- .github/
 |-- CONTRIBUTING.md
 |-- LICENSE
 |-- README.md
 |-- README.zh-CN.md
+|-- tests/
 `-- SECURITY.md
 ```
 
@@ -117,6 +124,8 @@ Copy-Item -Recurse -Force `
 - `AZURE_DEVOPS_SERVER_TEAM`，可选，默认团队
 - `AZURE_DEVOPS_SERVER_API_VERSION`，可选，显式覆盖 API 版本
 - `AZURE_DEVOPS_SERVER_SERVER_VERSION`，可选，服务器提示值：`2022`、`2020`、`2019`、`2018`、`2017`、`2015` 或 `legacy`
+- `AZURE_DEVOPS_SERVER_SEARCH_BASE_URL`，可选，当搜索服务暴露在独立主机时使用
+- `AZURE_DEVOPS_SERVER_TESTRESULTS_BASE_URL`，可选，当测试结果服务暴露在独立主机时使用
 
 也支持以下 pipeline 风格的回退变量：
 
@@ -130,6 +139,8 @@ Copy-Item -Recurse -Force `
 ```powershell
 pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1
 pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckReleaseArea
+pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckSearchArea
+pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckTestResultsArea
 pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1 -CheckReleaseArea -DryRun
 ```
 
@@ -148,37 +159,82 @@ pwsh -File .\azure-devops-server\scripts\Invoke-AzureDevOpsServerApi.ps1 `
   -Resource repositories
 ```
 
+其他已支持示例：
+
+```powershell
+pwsh -File .\azure-devops-server\scripts\Invoke-AzureDevOpsServerApi.ps1 `
+  -Method GET `
+  -Area wiki `
+  -Resource wikis
+
+pwsh -File .\azure-devops-server\scripts\Invoke-AzureDevOpsServerApi.ps1 `
+  -Method GET `
+  -Area build `
+  -Project Fabrikam `
+  -Resource definitions
+
+pwsh -File .\azure-devops-server\scripts\Test-AzureDevOpsServerConnection.ps1 `
+  -Project Fabrikam `
+  -CheckReleaseArea
+
+$body = @{
+  searchText = "active bug"
+  '$top' = 25
+}
+
+pwsh -File .\azure-devops-server\scripts\Invoke-AzureDevOpsServerApi.ps1 `
+  -Method POST `
+  -Area search `
+  -Project Fabrikam `
+  -Resource workitemsearchresults `
+  -Body $body `
+  -AllowConditionalArea
+```
+
 ## 安全模型
 
 - 没有显式传入 `-AllowWrite` 时，写操作会被阻止。
 - 对变更类命令，应该先用 `-DryRun` 做预览。
 - `release` 路由属于条件支持，必须先探测通过后再正式使用。
-- 暂缓支持的区域会明确失败，不会伪装成 Azure DevOps Services 兼容。
-- 某些 `POST` 会被视为安全只读调用，例如 WIQL 查询。
+- `search` 和 `testresults` 仍属于条件支持，因为部分部署会把它们暴露在独立主机或不同服务拓扑上。
+- 只有显式白名单中的查询型 `POST` 才会绕过写入闸门。
+
+## 参考文档索引
+
+- [workflow-recipes.md](azure-devops-server/references/workflow-recipes.md)：常见任务模式
+- [repo-support.md](azure-devops-server/references/repo-support.md)：仓库、分支与拉取请求
+- [work-item-support.md](azure-devops-server/references/work-item-support.md)：工作项、WIQL、查询、评论与 JSON Patch 路由
+- [work-support.md](azure-devops-server/references/work-support.md)：团队设置、迭代、待办事项与容量规划
+- [build-support.md](azure-devops-server/references/build-support.md)：构建定义、构建记录、日志、产物与排队预览
+- [release-support.md](azure-devops-server/references/release-support.md)：发布定义、发布记录、环境、部署与变更预览
+- [wiki-support.md](azure-devops-server/references/wiki-support.md)：Wiki 列表与页面读取
+- [search-support.md](azure-devops-server/references/search-support.md)：搜索路由与独立主机注意事项
+- [test-support.md](azure-devops-server/references/test-support.md)：测试计划、套件、运行与运行结果
+- [test-results-support.md](azure-devops-server/references/test-results-support.md)：按构建或工作项关联的测试结果路由
+- [url-and-resource-areas.md](azure-devops-server/references/url-and-resource-areas.md)：collection URL 结构、作用域规则与 area 路由注意事项
+- [auth-and-configuration.md](azure-devops-server/references/auth-and-configuration.md)：认证模式、环境变量与覆盖优先级
+- [api-version-matrix.md](azure-devops-server/references/api-version-matrix.md)：服务器版本与 `api-version` 选择建议
 
 ## 开发与验证
 
 本地验证示例：
 
 ```powershell
-$files = @(
-  "azure-devops-server/scripts/AzureDevOpsServer.psm1",
-  "azure-devops-server/scripts/Invoke-AzureDevOpsServerApi.ps1",
-  "azure-devops-server/scripts/Test-AzureDevOpsServerConnection.ps1"
-)
-
-foreach ($file in $files) {
-  $tokens = $null
-  $errors = $null
-  [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
-  if ($errors.Count -gt 0) {
-    throw "Parse errors in $file"
-  }
-}
-
-Import-Module .\azure-devops-server\scripts\AzureDevOpsServer.psm1 -Force
-Get-AzureDevOpsServerSupportMatrix
+pwsh -File .\tests\Validate-AzureDevOpsServerSkill.ps1
 ```
+
+可选的非生产 smoke harness：
+
+```powershell
+$env:AZURE_DEVOPS_SERVER_SMOKE = "1"
+$env:AZURE_DEVOPS_SERVER_COLLECTION_URL = "https://ado-server/tfs/DefaultCollection"
+$env:AZURE_DEVOPS_SERVER_AUTH_MODE = "default-credentials"
+$env:AZURE_DEVOPS_SERVER_PROJECT = "Fabrikam"
+
+pwsh -File .\tests\Smoke-AzureDevOpsServerSkill.ps1
+```
+
+如果没有设置这些显式启用变量，smoke harness 会输出 skip 信息并以成功状态退出。
 
 这些检查也会在 GitHub Actions 的 push 和 pull request 流程中执行。
 

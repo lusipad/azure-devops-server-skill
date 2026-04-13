@@ -67,3 +67,17 @@ The helper maps `2019`, `2018`, `2017`, and `2015` to `legacy` for best-effort b
 - use `5.0` for explicit legacy hints unless the target proves it needs something else
 - prefer explicit overrides over silent guessing
 - if older TFS behavior appears, report that the target is outside first-class support
+
+## Extended-Area Notes
+
+The `wiki`, `search`, `testplan`, `test`, and `testresults` routes in this repository still follow the same defaulting rules:
+
+- start with the skill default for the target server hint
+- only raise `api-version` when the target server is known to support it
+- treat preview-only Microsoft Learn examples as hints, not as a reason to silently force preview versions
+
+Practical rule:
+
+- Azure DevOps Server 2020: stay on `6.0` unless the server proves otherwise
+- Azure DevOps Server 2022: prefer `7.0` when the route needs a newer shape
+- preview versions: use only with an explicit operator override and a known-good target

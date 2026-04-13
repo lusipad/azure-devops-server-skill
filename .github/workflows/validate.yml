@@ -41,17 +41,37 @@ jobs:
             throw "Expected support matrix entries were not returned."
           }
 
+      - name: Run repository validation tests
+        shell: pwsh
+        run: |
+          pwsh -File .\tests\Validate-AzureDevOpsServerSkill.ps1
+
+      - name: Verify smoke harness default skip
+        shell: pwsh
+        run: |
+          pwsh -File .\tests\Smoke-AzureDevOpsServerSkill.ps1
+
       - name: Verify repository metadata files
         shell: pwsh
         run: |
+          $contractPath = "azure-devops-server/support-contract.json"
+          if (-not (Test-Path $contractPath)) {
+            throw "Missing support contract: $contractPath"
+          }
+
+          $contract = Get-Content -Raw $contractPath | ConvertFrom-Json -AsHashtable
           $required = @(
             "README.md",
+            "README.zh-CN.md",
             "CONTRIBUTING.md",
             "SECURITY.md",
             "LICENSE",
             "azure-devops-server/SKILL.md",
-            "azure-devops-server/agents/openai.yaml"
-          )
+            "azure-devops-server/agents/openai.yaml",
+            $contractPath,
+            "tests/Validate-AzureDevOpsServerSkill.ps1",
+            "tests/Smoke-AzureDevOpsServerSkill.ps1"
+          ) + $contract.requiredReferences | Sort-Object -Unique
 
           foreach ($path in $required) {
             if (-not (Test-Path $path)) {

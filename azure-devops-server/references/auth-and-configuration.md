@@ -60,12 +60,17 @@ $env:AZURE_DEVOPS_SERVER_PROJECT = "Fabrikam"
 $env:AZURE_DEVOPS_SERVER_TEAM = "Fabrikam Team"
 $env:AZURE_DEVOPS_SERVER_API_VERSION = "6.0"
 $env:AZURE_DEVOPS_SERVER_SERVER_VERSION = "2020"
+$env:AZURE_DEVOPS_SERVER_SEARCH_BASE_URL = "https://ado-search-server/tfs/DefaultCollection"
+$env:AZURE_DEVOPS_SERVER_TESTRESULTS_BASE_URL = "https://ado-testresults-server/tfs/DefaultCollection"
 ```
 
 Notes:
 
 - `AZURE_DEVOPS_SERVER_PROJECT` is a default for project-scoped routes
 - `AZURE_DEVOPS_SERVER_TEAM` is a default for team-scoped `work` routes
+- `AZURE_DEVOPS_SERVER_API_VERSION` is honored by both helper scripts unless a per-command `-ApiVersion` override is passed
+- `AZURE_DEVOPS_SERVER_SEARCH_BASE_URL` is only needed when the server exposes search on a dedicated host
+- `AZURE_DEVOPS_SERVER_TESTRESULTS_BASE_URL` is only needed when the server exposes test results on a dedicated host
 - collection-scoped routes like `projects` or `projects/{project}/teams` do not use the default project/team path prefix
 
 If `AZURE_DEVOPS_SERVER_COLLECTION_URL` is missing, the scripts also accept:

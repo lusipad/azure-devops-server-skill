@@ -16,6 +16,8 @@ param(
     [string]$ApiVersion,
     [ValidateSet("2022", "2020", "2019", "2018", "2017", "2015", "legacy")]
     [string]$ServerVersionHint,
+    [string]$SearchBaseUrl,
+    [string]$TestResultsBaseUrl,
     [switch]$AllowConditionalArea,
     [switch]$DryRun,
     [switch]$JsonPatch,
