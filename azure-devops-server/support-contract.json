@@ -110,6 +110,44 @@
       "Azure DevOps Services parity"
     ]
   },
+  "communityFiles": [
+    "CHANGELOG.md",
+    "SUPPORT.md",
+    "CODE_OF_CONDUCT.md"
+  ],
+  "issueTemplates": {
+    "bugReportAreas": [
+      "core/projects",
+      "git",
+      "wit",
+      "build",
+      "work",
+      "wiki",
+      "testplan",
+      "test",
+      "release",
+      "search",
+      "testresults",
+      "docs",
+      "installation"
+    ],
+    "featureRequestAreas": [
+      "core/projects",
+      "git",
+      "wit",
+      "build",
+      "work",
+      "wiki",
+      "testplan",
+      "test",
+      "release",
+      "search",
+      "testresults",
+      "docs",
+      "installation",
+      "other"
+    ]
+  },
   "conditionalSmokeAreas": [
     "release",
     "search",

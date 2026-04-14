@@ -3,3 +3,9 @@ contact_links:
   - name: Usage and installation guide
     url: https://github.com/lusipad/azure-devops-server-skill/blob/main/README.md
     about: Check the README and bundled references before opening an issue.
+  - name: Support guide
+    url: https://github.com/lusipad/azure-devops-server-skill/blob/main/SUPPORT.md
+    about: Use the support guide to choose between bug reports, feature requests, and security reports.
+  - name: Security policy
+    url: https://github.com/lusipad/azure-devops-server-skill/blob/main/SECURITY.md
+    about: Report active vulnerabilities through a private channel.

@@ -89,6 +89,9 @@ $smokeConditionalAreas = @($contract["conditionalSmokeAreas"])
 $deferredPolicyLines = $contract["deferredPolicyLines"]
 $requiredMetadataTerms = @($contract["metadataCoverage"]["openaiDefaultPromptMustMention"])
 $forbiddenMetadataTerms = @($contract["metadataCoverage"]["openaiDefaultPromptMustNotMention"])
+$communityFiles = @($contract["communityFiles"])
+$bugReportAreaOptions = @($contract["issueTemplates"]["bugReportAreas"])
+$featureRequestAreaOptions = @($contract["issueTemplates"]["featureRequestAreas"])
 $englishSupportLabels = @{
     required    = "Required"
     supported   = "Supported"
@@ -343,6 +346,12 @@ $openaiMetadata = Get-Content -Raw (Join-Path $repoRoot "azure-devops-server/age
 $workflowRecipes = Get-Content -Raw (Join-Path $repoRoot "azure-devops-server/references/workflow-recipes.md")
 $validateWorkflow = Get-Content -Raw (Join-Path $repoRoot ".github/workflows/validate.yml")
 $smokeHarnessScript = Get-Content -Raw (Join-Path $repoRoot "tests/Smoke-AzureDevOpsServerSkill.ps1")
+$bugReportTemplate = Get-Content -Raw (Join-Path $repoRoot ".github/ISSUE_TEMPLATE/bug_report.yml")
+$featureRequestTemplate = Get-Content -Raw (Join-Path $repoRoot ".github/ISSUE_TEMPLATE/feature_request.yml")
+$issueTemplateConfig = Get-Content -Raw (Join-Path $repoRoot ".github/ISSUE_TEMPLATE/config.yml")
+$changelog = Get-Content -Raw (Join-Path $repoRoot "CHANGELOG.md")
+$supportGuide = Get-Content -Raw (Join-Path $repoRoot "SUPPORT.md")
+$codeOfConduct = Get-Content -Raw (Join-Path $repoRoot "CODE_OF_CONDUCT.md")
 $prdPlan = Get-Content -Raw (Join-Path $repoRoot ".omx/plans/prd-azure-devops-server-skill.md")
 $testSpecPlan = Get-Content -Raw (Join-Path $repoRoot ".omx/plans/test-spec-azure-devops-server-skill.md")
 $wikiSupport = Get-Content -Raw (Join-Path $repoRoot "azure-devops-server/references/wiki-support.md")
@@ -351,6 +360,12 @@ $releaseSupport = Get-Content -Raw (Join-Path $repoRoot "azure-devops-server/ref
 
 foreach ($path in $requiredReferences) {
     Assert-True (Test-Path (Join-Path $repoRoot $path)) "Required reference should exist: $path"
+}
+
+foreach ($path in $communityFiles) {
+    Assert-True (Test-Path (Join-Path $repoRoot $path)) "Community file should exist: $path"
+    Assert-TextContainsLiteral $readme "($path)" "README should link to $path."
+    Assert-TextContainsLiteral $readmeZh "($path)" "Chinese README should link to $path."
 }
 
 foreach ($area in $expectedSupportMatrix.Keys) {
@@ -393,6 +408,24 @@ foreach ($term in $requiredMetadataTerms) {
 foreach ($term in $forbiddenMetadataTerms) {
     Assert-TextNotContainsLiteral $openaiMetadata $term "openai.yaml should not promote '$term'."
 }
+
+foreach ($area in $bugReportAreaOptions) {
+    Assert-TextContainsLiteral $bugReportTemplate "- $area" "Bug report template should offer area '$area'."
+}
+
+foreach ($area in $featureRequestAreaOptions) {
+    Assert-TextContainsLiteral $featureRequestTemplate "- $area" "Feature request template should offer area '$area'."
+}
+
+Assert-TextContainsLiteral $issueTemplateConfig "README.md" "Issue template config should link to the README."
+Assert-TextContainsLiteral $issueTemplateConfig "SUPPORT.md" "Issue template config should link to the support guide."
+Assert-TextContainsLiteral $issueTemplateConfig "SECURITY.md" "Issue template config should link to the security policy."
+
+Assert-True ($changelog -match '(?m)^## Unreleased\s*$') "CHANGELOG should keep an Unreleased section."
+Assert-TextContainsLiteral $supportGuide "Before opening an issue" "Support guide should describe pre-issue checks."
+Assert-TextContainsLiteral $supportGuide "Security issues" "Support guide should route security issues privately."
+Assert-TextContainsLiteral $codeOfConduct "Expected behavior" "Code of conduct should define expected behavior."
+Assert-TextContainsLiteral $codeOfConduct "Unacceptable behavior" "Code of conduct should define unacceptable behavior."
 
 Assert-TextContainsLiteral $validateWorkflow "azure-devops-server/support-contract.json" "CI should require the shared support contract."
 Assert-TextContainsLiteral $validateWorkflow "ConvertFrom-Json -AsHashtable" "CI should load the shared support contract."

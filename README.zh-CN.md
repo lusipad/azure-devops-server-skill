@@ -238,6 +238,14 @@ pwsh -File .\tests\Smoke-AzureDevOpsServerSkill.ps1
 
 这些检查也会在 GitHub Actions 的 push 和 pull request 流程中执行。
 
+## 项目协作与支持
+
+- [CHANGELOG.md](CHANGELOG.md)：记录仓库中的重要变更
+- [SUPPORT.md](SUPPORT.md)：说明使用问题、issue 分流方式以及提报时应提供的信息
+- [CONTRIBUTING.md](CONTRIBUTING.md)：说明贡献流程与验证要求
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)：说明协作行为预期
+- [SECURITY.md](SECURITY.md)：说明漏洞上报方式
+
 ## 贡献
 
 贡献方式见 [CONTRIBUTING.md](CONTRIBUTING.md)。保持改动小而明确，保留现有支持边界，并在脚本行为变化时同步更新文档。

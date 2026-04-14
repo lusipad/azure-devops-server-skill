@@ -238,6 +238,14 @@ If the opt-in env vars are absent, the smoke harness prints a skip message and e
 
 The same checks run in GitHub Actions on pushes and pull requests.
 
+## Project Docs
+
+- [CHANGELOG.md](CHANGELOG.md) for notable repository changes
+- [SUPPORT.md](SUPPORT.md) for usage questions, issue routing, and report expectations
+- [CONTRIBUTING.md](CONTRIBUTING.md) for contribution workflow and validation requirements
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for collaboration expectations
+- [SECURITY.md](SECURITY.md) for vulnerability reporting
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Keep changes tight, preserve support boundaries, and update docs together with script behavior.

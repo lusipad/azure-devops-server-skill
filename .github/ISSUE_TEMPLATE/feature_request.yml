@@ -21,8 +21,14 @@ body:
         - wit
         - build
         - work
+        - wiki
+        - testplan
+        - test
         - release
+        - search
+        - testresults
         - docs
+        - installation
         - other
     validations:
       required: true
