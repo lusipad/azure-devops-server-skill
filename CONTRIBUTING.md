@@ -50,7 +50,6 @@ If your change affects examples, routes, support claims, or bootstrap behavior, 
 - `azure-devops-server/support-contract.json`
 - `azure-devops-server/SKILL.md`
 - `azure-devops-server/references/*.md`
-- `.omx/plans/*.md`
 - `tests/Validate-AzureDevOpsServerSkill.ps1`
 - `tests/Smoke-AzureDevOpsServerSkill.ps1`
 - Script comments or examples in the repository root docs when needed

@@ -352,8 +352,8 @@ $issueTemplateConfig = Get-Content -Raw (Join-Path $repoRoot ".github/ISSUE_TEMP
 $changelog = Get-Content -Raw (Join-Path $repoRoot "CHANGELOG.md")
 $supportGuide = Get-Content -Raw (Join-Path $repoRoot "SUPPORT.md")
 $codeOfConduct = Get-Content -Raw (Join-Path $repoRoot "CODE_OF_CONDUCT.md")
-$prdPlan = Get-Content -Raw (Join-Path $repoRoot ".omx/plans/prd-azure-devops-server-skill.md")
-$testSpecPlan = Get-Content -Raw (Join-Path $repoRoot ".omx/plans/test-spec-azure-devops-server-skill.md")
+$prdPlanPath = Join-Path $repoRoot ".omx/plans/prd-azure-devops-server-skill.md"
+$testSpecPlanPath = Join-Path $repoRoot ".omx/plans/test-spec-azure-devops-server-skill.md"
 $wikiSupport = Get-Content -Raw (Join-Path $repoRoot "azure-devops-server/references/wiki-support.md")
 $buildSupport = Get-Content -Raw (Join-Path $repoRoot "azure-devops-server/references/build-support.md")
 $releaseSupport = Get-Content -Raw (Join-Path $repoRoot "azure-devops-server/references/release-support.md")
@@ -442,15 +442,20 @@ foreach ($area in $smokeConditionalAreas) {
     Assert-TextContainsLiteral $smokeHarnessScript $area "Smoke harness should route conditional area '$area' from the contract."
 }
 
-Assert-TextContainsLiteral $prdPlan "support-contract.json" "PRD should require the shared support contract."
-Assert-TextContainsLiteral $prdPlan "tests/Smoke-AzureDevOpsServerSkill.ps1" "PRD should require the smoke harness scaffold."
-Assert-TextContainsLiteral $prdPlan "Deferred or cloud-only domains are not reintroduced" "PRD should keep deferred domains out of supported or conditional status."
-Assert-True ($prdPlan -notmatch 'Deferred after v1') "PRD should not retain the legacy deferred-after-v1 block."
+if ((Test-Path $prdPlanPath) -and (Test-Path $testSpecPlanPath)) {
+    $prdPlan = Get-Content -Raw $prdPlanPath
+    $testSpecPlan = Get-Content -Raw $testSpecPlanPath
 
-Assert-TextContainsLiteral $testSpecPlan "support-contract.json" "Test spec should validate the shared support contract."
-Assert-TextContainsLiteral $testSpecPlan "AZURE_DEVOPS_SERVER_SMOKE=1" "Test spec should document smoke-harness opt-in."
-Assert-TextContainsLiteral $testSpecPlan "the skip path is treated as success" "Test spec should define default skip semantics."
-Assert-True ($testSpecPlan -notmatch 'Deferred after v1') "Test spec should not retain the legacy deferred-after-v1 block."
+    Assert-TextContainsLiteral $prdPlan "support-contract.json" "PRD should require the shared support contract."
+    Assert-TextContainsLiteral $prdPlan "tests/Smoke-AzureDevOpsServerSkill.ps1" "PRD should require the smoke harness scaffold."
+    Assert-TextContainsLiteral $prdPlan "Deferred or cloud-only domains are not reintroduced" "PRD should keep deferred domains out of supported or conditional status."
+    Assert-True ($prdPlan -notmatch 'Deferred after v1') "PRD should not retain the legacy deferred-after-v1 block."
+
+    Assert-TextContainsLiteral $testSpecPlan "support-contract.json" "Test spec should validate the shared support contract."
+    Assert-TextContainsLiteral $testSpecPlan "AZURE_DEVOPS_SERVER_SMOKE=1" "Test spec should document smoke-harness opt-in."
+    Assert-TextContainsLiteral $testSpecPlan "the skip path is treated as success" "Test spec should define default skip semantics."
+    Assert-True ($testSpecPlan -notmatch 'Deferred after v1') "Test spec should not retain the legacy deferred-after-v1 block."
+}
 
 Assert-TextContainsLiteral $readme $deferredPolicyLines["README.md"] "README should preserve the deferred-domain policy line."
 Assert-TextContainsLiteral $readmeZh $deferredPolicyLines["README.zh-CN.md"] "Chinese README should preserve the deferred-domain policy line."
